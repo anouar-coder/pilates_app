@@ -1,0 +1,63 @@
+// web/index.html
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Pilates Studio Application">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pilates Studio</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Scripts Firebase - versions compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+  
+  <script>
+    // Initialisation Firebase dans la page principale
+    const firebaseConfig = {
+      apiKey: "AIzaSyCHrLdhc8_x5MQSZC8x3iFBS5QX1WKD7Po",
+      authDomain: "pilates-app-4430c.firebaseapp.com",
+      projectId: "pilates-app-4430c",
+      storageBucket: "pilates-app-4430c.firebasestorage.app",
+      messagingSenderId: "330283354212",
+      appId: "1:330283354212:web:e8516915cdf03d1a717771"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    
+    // Récupérer le token sans demander la permission (géré par Flutter)
+    const messaging = firebase.messaging();
+    
+    messaging.getToken()
+      .then((token) => {
+        console.log('📱 Token FCM:', token);
+      })
+      .catch((error) => {
+        console.log('❌ Erreur token:', error);
+      });
+
+    // Enregistrement du service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('firebase-messaging-sw.js')
+          .then(function(registration) {
+            console.log('✅ Service Worker enregistré:', registration.scope);
+          })
+          .catch(function(error) {
+            console.log('❌ Service Worker erreur:', error);
+          });
+      });
+    }
+  </script>
+
+  <script src="main.dart.js" type="application/javascript"></script>
+</body>
+</html>
