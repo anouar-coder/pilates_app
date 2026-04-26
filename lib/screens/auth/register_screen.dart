@@ -1,7 +1,8 @@
-// lib/screens/auth/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../config/app_theme.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,34 +12,28 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nomController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _nomController      = TextEditingController();
+  final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  final _confirmController  = TextEditingController();
+  final _formKey            = GlobalKey<FormState>();
+  bool _isLoading           = false;
+  bool _obscurePassword     = true;
+  bool _obscureConfirm      = true;
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
-      // 1. Créer l'utilisateur dans Firebase Auth
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-
-      // 2. Créer le profil dans Firestore
-      if (userCredential.user != null) {
-        final user = userCredential.user!;
-        
-        // Profil par défaut
-        final nouveauProfil = {
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      if (cred.user != null) {
+        await FirebaseFirestore.instance
+            .collection('utilisateurs')
+            .doc(cred.user!.uid)
+            .set({
           'nom': _nomController.text.trim(),
           'email': _emailController.text.trim(),
           'telephone': null,
@@ -51,48 +46,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'coursReserves': 0,
           'coursAnnules': 0,
           'noteMoyenne': 0.0,
-          'role': 'client', 
-        };
-
-        // Sauvegarder dans Firestore
-        await FirebaseFirestore.instance
-            .collection('utilisateurs')
-            .doc(user.uid)
-            .set(nouveauProfil);
-
-        print('✅ Profil créé avec succès pour ${user.uid}');
+          'role': 'client',
+        });
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Compte créé avec succès!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pushReplacementNamed(context, '/accueil');
-      }
+      if (mounted) Navigator.pushReplacementNamed(context, '/accueil');
     } on FirebaseAuthException catch (e) {
-      String message = 'Erreur d\'inscription';
-      if (e.code == 'email-already-in-use') {
-        message = 'Cet email est déjà utilisé';
-      } else if (e.code == 'weak-password') {
-        message = 'Mot de passe trop faible (minimum 6 caractères)';
-      }
-      
+      String msg = "Erreur d'inscription";
+      if (e.code == 'email-already-in-use') msg = 'Cet email est déjà utilisé';
+      if (e.code == 'weak-password') msg = 'Mot de passe trop faible (min. 6 caractères)';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-      }
-    } catch (e) {
-      print('❌ Erreur inattendue: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors de la création du compte'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(msg), backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -103,191 +67,136 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inscription'),
-      ),
+      backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Créer un compte',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(32, 64, 32, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PILATE',
+                  style: AppText.label(size: 13, color: AppColors.ink3, letterSpacing: 3),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Bienvenue',
+                  style: GoogleFonts.fraunces(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w400,
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.ink,
+                    letterSpacing: -1.2,
+                    height: 1.05,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Rejoignez notre studio Pilates',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Créez votre compte en quelques secondes.',
+                  style: AppText.body(size: 14, color: AppColors.ink3, height: 1.5),
+                ),
+                const SizedBox(height: 36),
 
-                  // Champ Nom
-                  TextFormField(
-                    controller: _nomController,
-                    decoration: InputDecoration(
-                      labelText: 'Nom complet',
-                      prefixIcon: const Icon(Icons.person),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre nom';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                PilateField(
+                  controller: _nomController,
+                  hint: 'Nom complet',
+                  icon: Icons.person_outline_rounded,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Nom requis';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
 
-                  // Champ Email
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email invalide';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                PilateField(
+                  controller: _emailController,
+                  hint: 'votre@email.com',
+                  icon: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Email requis';
+                    if (!v.contains('@')) return 'Email invalide';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
 
-                  // Champ Mot de passe
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Mot de passe',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                PilateField(
+                  controller: _passwordController,
+                  hint: 'Mot de passe',
+                  icon: Icons.lock_outline_rounded,
+                  obscureText: _obscurePassword,
+                  suffix: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: AppColors.ink4,
+                      size: 20,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer un mot de passe';
-                      }
-                      if (value.length < 6) {
-                        return 'Minimum 6 caractères';
-                      }
-                      return null;
-                    },
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
-                  const SizedBox(height: 16),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Mot de passe requis';
+                    if (v.length < 6) return 'Minimum 6 caractères';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
 
-                  // Champ Confirmer mot de passe
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    decoration: InputDecoration(
-                      labelText: 'Confirmer mot de passe',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                PilateField(
+                  controller: _confirmController,
+                  hint: 'Confirmer le mot de passe',
+                  icon: Icons.lock_outline_rounded,
+                  obscureText: _obscureConfirm,
+                  suffix: IconButton(
+                    icon: Icon(
+                      _obscureConfirm
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: AppColors.ink4,
+                      size: 20,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez confirmer';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Les mots de passe ne correspondent pas';
-                      }
-                      return null;
-                    },
+                    onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
-                  const SizedBox(height: 24),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Confirmation requise';
+                    if (v != _passwordController.text) return 'Les mots de passe ne correspondent pas';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
 
-                  // Bouton Inscription
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "S'inscrire",
-                              style: TextStyle(fontSize: 18),
+                AppButton(
+                  label: "Créer mon compte",
+                  onPressed: _register,
+                  isLoading: _isLoading,
+                ),
+                const SizedBox(height: 32),
+
+                Center(
+                  child: RichText(
+                    text: TextSpan(
+                      style: AppText.body(size: 13, color: AppColors.ink3),
+                      children: [
+                        const TextSpan(text: 'Déjà membre ? '),
+                        WidgetSpan(
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Text(
+                              'Se connecter',
+                              style: AppText.body(
+                                  size: 13, weight: FontWeight.w600, color: AppColors.ink),
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Lien vers connexion
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Déjà un compte? "),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: const Text(
-                          "Se connecter",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -300,7 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nomController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 }

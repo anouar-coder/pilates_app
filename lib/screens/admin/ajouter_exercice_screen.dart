@@ -56,6 +56,7 @@ class _AjouterExerciceScreenState extends State<AjouterExerciceScreen> {
       exercice,
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success) {

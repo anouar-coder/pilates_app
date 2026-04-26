@@ -1,6 +1,7 @@
-// lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../config/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,37 +11,28 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
+  final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
-  bool _obscurePassword = true;
+  final _formKey            = GlobalKey<FormState>();
+  bool _isLoading           = false;
+  bool _obscurePassword     = true;
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/accueil');
-      }
+      if (mounted) Navigator.pushReplacementNamed(context, '/accueil');
     } on FirebaseAuthException catch (e) {
       String message = 'Erreur de connexion';
-      if (e.code == 'user-not-found') {
-        message = 'Utilisateur non trouvé';
-      } else if (e.code == 'wrong-password') {
-        message = 'Mot de passe incorrect';
-      }
-      
+      if (e.code == 'user-not-found') message = 'Utilisateur non trouvé';
+      if (e.code == 'wrong-password') message = 'Mot de passe incorrect';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
+          SnackBar(content: Text(message), backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -51,151 +43,153 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo ou icône
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.fitness_center,
-                      size: 50,
-                      color: Colors.blue,
-                    ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(32, 64, 32, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PILATE',
+                  style: AppText.label(size: 13, color: AppColors.ink3, letterSpacing: 3),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Bon retour',
+                  style: GoogleFonts.fraunces(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w400,
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.ink,
+                    letterSpacing: -1.2,
+                    height: 1.05,
                   ),
-                  const SizedBox(height: 32),
-                  
-                  // Titre
-                  const Text(
-                    'Bienvenue',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Connectez-vous pour continuer',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Connectez-vous pour réserver votre prochaine séance.',
+                  style: AppText.body(size: 14, color: AppColors.ink3, height: 1.5),
+                ),
+                const SizedBox(height: 36),
 
-                  // Champ Email
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                PilateField(
+                  controller: _emailController,
+                  hint: 'votre@email.com',
+                  icon: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Email requis';
+                    if (!v.contains('@')) return 'Email invalide';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                PilateField(
+                  controller: _passwordController,
+                  hint: '••••••••',
+                  icon: Icons.lock_outline_rounded,
+                  obscureText: _obscurePassword,
+                  suffix: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: AppColors.ink4,
+                      size: 20,
+                    ),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Mot de passe requis';
+                    if (v.length < 6) return 'Minimum 6 caractères';
+                    return null;
+                  },
+                ),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {},
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      foregroundColor: AppColors.ink3,
+                    ),
+                    child: Text(
+                      'Mot de passe oublié ?',
+                      style: AppText.body(size: 13, color: AppColors.ink3),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                AppButton(
+                  label: 'Se connecter',
+                  onPressed: _login,
+                  isLoading: _isLoading,
+                ),
+                const SizedBox(height: 28),
+
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: AppColors.line)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'ou continuer avec',
+                        style: AppText.body(size: 12, color: AppColors.ink4),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email invalide';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                    const Expanded(child: Divider(color: AppColors.line)),
+                  ],
+                ),
+                const SizedBox(height: 20),
 
-                  // Champ Mot de passe
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Mot de passe',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SocialButton(
+                        label: 'Apple',
+                        icon: Icons.apple_rounded,
+                        onTap: () {},
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre mot de passe';
-                      }
-                      if (value.length < 6) {
-                        return 'Mot de passe trop court';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Bouton Connexion
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _SocialButton(
+                        label: 'Google',
+                        icon: Icons.g_mobiledata_rounded,
+                        onTap: () {},
                       ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Se connecter',
-                              style: TextStyle(fontSize: 18),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+
+                Center(
+                  child: RichText(
+                    text: TextSpan(
+                      style: AppText.body(size: 13, color: AppColors.ink3),
+                      children: [
+                        const TextSpan(text: "Pas encore de compte ? "),
+                        WidgetSpan(
+                          child: GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, '/register'),
+                            child: Text(
+                              "S'inscrire",
+                              style: AppText.body(
+                                  size: 13, weight: FontWeight.w600, color: AppColors.ink),
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Lien vers inscription
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Pas encore de compte? "),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/register');
-                        },
-                        child: const Text(
-                          "S'inscrire",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -208,5 +202,37 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+}
+
+// ── Social button ─────────────────────────────────────────────────────────────
+class _SocialButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _SocialButton({required this.label, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.cardAlt,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: AppColors.line, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.ink2, size: 20),
+            const SizedBox(width: 8),
+            Text(label, style: AppText.body(size: 14, weight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -181,7 +181,7 @@ class _AjouterCoursScreenState extends State<AjouterCoursScreen> {
 
                     // Niveau
                     DropdownButtonFormField<String>(
-                      value: _selectedNiveau,
+                      initialValue: _selectedNiveau,
                       decoration: InputDecoration(
                         labelText: 'Niveau',
                         prefixIcon: const Icon(Icons.trending_up),

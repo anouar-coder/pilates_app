@@ -114,17 +114,22 @@ class ChatService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Utilisateur non connecté');
 
-    // Vérifier si une conversation existe déjà
-    final existingConv = await _firestore
+    // Vérifier si une conversation existe déjà (deux requêtes car whereIn sur deux champs n'est pas supporté)
+    final conv1 = await _firestore
         .collection('conversations')
-        .where('user1Id', whereIn: [user.uid, autreUserId])
-        .where('user2Id', whereIn: [user.uid, autreUserId])
+        .where('user1Id', isEqualTo: user.uid)
+        .where('user2Id', isEqualTo: autreUserId)
         .limit(1)
         .get();
+    if (conv1.docs.isNotEmpty) return conv1.docs.first.id;
 
-    if (existingConv.docs.isNotEmpty) {
-      return existingConv.docs.first.id;
-    }
+    final conv2 = await _firestore
+        .collection('conversations')
+        .where('user1Id', isEqualTo: autreUserId)
+        .where('user2Id', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+    if (conv2.docs.isNotEmpty) return conv2.docs.first.id;
 
     // Récupérer les infos de l'autre utilisateur
     final autreUserDoc = await _firestore
@@ -194,18 +199,19 @@ class ChatService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Récupérer tous les messages non lus envoyés à l'utilisateur
+    // Récupérer tous les messages non lus, filtrer côté client pour éviter l'index composite
     final unreadMessages = await _firestore
         .collection('conversations')
         .doc(conversationId)
         .collection('messages')
-        .where('expediteurId', isNotEqualTo: user.uid)
         .where('lu', isEqualTo: false)
         .get();
 
-    // Marquer chaque message comme lu
+    // Marquer comme lus uniquement les messages des autres (pas les siens)
     for (var doc in unreadMessages.docs) {
-      await doc.reference.update({'lu': true});
+      if (doc.data()['expediteurId'] != user.uid) {
+        await doc.reference.update({'lu': true});
+      }
     }
 
     // Réinitialiser le compteur de messages non lus
@@ -227,7 +233,7 @@ class ChatService {
         .map((snapshot) {
           final clients = snapshot.docs.where((doc) {
             if (doc.id == currentUserId) return false;
-            final data = doc.data() as Map<String, dynamic>;
+            final data = doc.data();
             final role = data['role'];
             return role == 'client' || role == null;
           }).toList();

@@ -1,10 +1,10 @@
-// lib/screens/reservations/mes_reservations_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/firebase_service.dart';
 import '../../services/avis_service.dart';
 import '../../models/reservation.dart';
 import '../../models/cours.dart';
+import '../../config/app_theme.dart';
 import '../avis/ajouter_avis_screen.dart';
 
 class MesReservationsScreen extends StatefulWidget {
@@ -21,259 +21,349 @@ class _MesReservationsScreenState extends State<MesReservationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes réservations'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: StreamBuilder<List<Reservation>>(
-        stream: _firebaseService.getMesReservations(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Erreur: ${snapshot.error}'),
-            );
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final reservations = snapshot.data ?? [];
-
-          if (reservations.isEmpty) {
-            return Center(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.event_busy, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('Aucune réservation',
-                      style: TextStyle(fontSize: 20, color: Colors.grey[600])),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/accueil');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  Text('MES COURS', style: AppText.label(size: 11, color: AppColors.ink3, letterSpacing: 2.5)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Réservations',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w400,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.ink,
+                      letterSpacing: -0.8,
+                      height: 1.05,
                     ),
-                    child: const Text('Voir les cours'),
                   ),
                 ],
               ),
-            );
-          }
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.line),
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: reservations.length,
-            itemBuilder: (context, index) {
-              final reservation = reservations[index];
-              return FutureBuilder<Cours?>(
-                future: _firebaseService.getCoursById(reservation.coursId),
-                builder: (context, coursSnapshot) {
-                  if (!coursSnapshot.hasData) {
-                    return const Card(
-                      child: ListTile(
-                        leading: CircularProgressIndicator(),
-                        title: Text('Chargement...'),
+            // ── List ─────────────────────────────────────────────────
+            Expanded(
+              child: StreamBuilder<List<Reservation>>(
+                stream: _firebaseService.getMesReservations(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text('Erreur: ${snapshot.error}',
+                          style: AppText.body(size: 14, color: AppColors.danger)),
+                    );
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                        child: CircularProgressIndicator(color: AppColors.sage, strokeWidth: 2));
+                  }
+
+                  final reservations = snapshot.data ?? [];
+
+                  if (reservations.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.bookmark_outline_rounded,
+                              size: 60, color: AppColors.ink4.withValues(alpha: 0.4)),
+                          const SizedBox(height: 16),
+                          Text('Aucune réservation pour le moment',
+                              style: AppText.body(size: 15, color: AppColors.ink3)),
+                          const SizedBox(height: 24),
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, '/accueil'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.ink,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
+                              ),
+                              child: Text('Voir les cours',
+                                  style: AppText.body(size: 14, weight: FontWeight.w500, color: Colors.white)),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
 
-                  final cours = coursSnapshot.data!;
-                  
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                         // Dans la partie où tu as le bouton Noter, remplace par :
-
-Row(
-  mainAxisAlignment: MainAxisAlignment.end,
-  children: [
-    // Bouton Noter - TOUJOURS VISIBLE POUR TEST
-    ElevatedButton(
-      onPressed: () async {
-        final avisExistant = await _avisService.getMonAvis(cours.id);
-        if (avisExistant != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vous avez déjà donné votre avis'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AjouterAvisScreen(cours: cours),
-            ),
-          );
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.amber,
-        foregroundColor: Colors.white,
-      ),
-      child: const Text('Noter'),
-    ),
-    const SizedBox(width: 8),
-    
-    // Bouton Annuler
-    OutlinedButton(
-      onPressed: () {
-        _showAnnulationDialog(context, reservation, cours);
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.red,
-        side: const BorderSide(color: Colors.red),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: const Text('Annuler'),
-    ),
-  ],
-),
-                          const SizedBox(height: 12),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 4),
-                              Text('${cours.date.day}/${cours.date.month}/${cours.date.year}',
-                                  style: TextStyle(color: Colors.grey[600])),
-                              const SizedBox(width: 16),
-                              Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 4),
-                              Text('${cours.duree} min',
-                                  style: TextStyle(color: Colors.grey[600])),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              // Bouton Noter (pour les cours passés)
-                              if (cours.date.isBefore(DateTime.now())) ...[
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    final peutAvis = await _avisService.peutLaisserAvis(cours.id);
-                                    if (peutAvis) {
-                                      final avisExistant = await _avisService.getMonAvis(cours.id);
-                                      if (avisExistant != null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Vous avez déjà donné votre avis'),
-                                            backgroundColor: Colors.orange,
-                                          ),
-                                        );
-                                      } else {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => AjouterAvisScreen(cours: cours),
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Vous ne pouvez pas encore donner votre avis'),
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.amber,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: const Text('Noter'),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              OutlinedButton(
-                                onPressed: () {
-                                  _showAnnulationDialog(context, reservation, cours);
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text('Annuler'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    itemCount: reservations.length,
+                    itemBuilder: (context, index) {
+                      final reservation = reservations[index];
+                      return FutureBuilder<Cours?>(
+                        future: _firebaseService.getCoursById(reservation.coursId),
+                        builder: (context, coursSnapshot) {
+                          if (!coursSnapshot.hasData) {
+                            return _LoadingCard();
+                          }
+                          final cours = coursSnapshot.data!;
+                          return _ReservationCard(
+                            cours: cours,
+                            reservation: reservation,
+                            avisService: _avisService,
+                            firebaseService: _firebaseService,
+                          );
+                        },
+                      );
+                    },
                   );
                 },
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Loading placeholder ───────────────────────────────────────────────────────
+class _LoadingCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      height: 80,
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sh1,
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: AppColors.sage, strokeWidth: 2),
+      ),
+    );
+  }
+}
+
+// ── Reservation card ──────────────────────────────────────────────────────────
+class _ReservationCard extends StatelessWidget {
+  final Cours cours;
+  final Reservation reservation;
+  final AvisService avisService;
+  final FirebaseService firebaseService;
+
+  const _ReservationCard({
+    required this.cours,
+    required this.reservation,
+    required this.avisService,
+    required this.firebaseService,
+  });
+
+  bool get _isPast => cours.date.isBefore(DateTime.now());
+
+  Color get _niveauDot {
+    switch (cours.niveau) {
+      case 'Avancé':        return AppColors.danger;
+      case 'Intermédiaire': return AppColors.warn;
+      default:              return AppColors.sage;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr =
+        '${cours.date.day.toString().padLeft(2, '0')}/${cours.date.month.toString().padLeft(2, '0')}/${cours.date.year}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sh1,
+        border: Border(left: BorderSide(color: _niveauDot, width: 3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title + status
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(cours.titre,
+                      style: AppText.body(size: 16, weight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _isPast ? AppColors.bg2 : AppColors.sageBg,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Text(
+                    _isPast ? 'Terminé' : 'À venir',
+                    style: AppText.body(
+                      size: 11,
+                      weight: FontWeight.w500,
+                      color: _isPast ? AppColors.ink3 : AppColors.sageDeep,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Meta
+            Wrap(
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+                _Meta(icon: Icons.person_outline_rounded, label: cours.coach),
+                _Meta(icon: Icons.calendar_today_outlined, label: dateStr),
+                _Meta(icon: Icons.access_time_rounded, label: '${cours.duree} min'),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Actions
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_isPast)
+                  _ActionBtn(
+                    label: 'Évaluer',
+                    icon: Icons.star_outline_rounded,
+                    color: AppColors.clay,
+                    onTap: () => _handleRating(context),
+                  ),
+                if (_isPast) const SizedBox(width: 8),
+                _ActionBtn(
+                  label: 'Annuler',
+                  icon: Icons.close_rounded,
+                  color: AppColors.danger,
+                  outline: true,
+                  onTap: () => _showCancelDialog(context),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showAnnulationDialog(BuildContext context, Reservation reservation, Cours cours) {
+  Future<void> _handleRating(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final existing = await avisService.getMonAvis(cours.id);
+    if (!context.mounted) return;
+    if (existing != null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Vous avez déjà donné votre avis')),
+      );
+    } else {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => AjouterAvisScreen(cours: cours)));
+    }
+  }
+
+  void _showCancelDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Annuler la réservation'),
-        content: Text('Voulez-vous vraiment annuler votre réservation pour "${cours.titre}" ?'),
+      builder: (_) => AlertDialog(
+        title: Text('Annuler la réservation',
+            style: AppText.body(size: 17, weight: FontWeight.w600)),
+        content: Text('Voulez-vous annuler votre réservation pour "${cours.titre}" ?',
+            style: AppText.body(size: 15, color: AppColors.ink2)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Non'),
+            onPressed: () => Navigator.pop(context),
+            child: Text('Non', style: AppText.body(size: 14, color: AppColors.ink3)),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () async {
-              Navigator.pop(dialogContext);
-              
-              final success = await _firebaseService.annulerReservation(
+              Navigator.pop(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await firebaseService.annulerReservation(
                 reservation.id,
                 reservation.coursId,
               );
-
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Réservation annulée avec succès'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Erreur lors de l\'annulation'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(success
+                      ? 'Réservation annulée'
+                      : 'Erreur lors de l\'annulation'),
+                ),
+              );
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Oui, annuler'),
+            child: Text('Oui, annuler',
+                style: AppText.body(size: 14, weight: FontWeight.w600, color: AppColors.danger)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Meta extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _Meta({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: AppColors.ink4),
+        const SizedBox(width: 4),
+        Text(label, style: AppText.body(size: 12, color: AppColors.ink3)),
+      ],
+    );
+  }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool outline;
+  final VoidCallback onTap;
+
+  const _ActionBtn({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.outline = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: outline ? Colors.transparent : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: outline
+              ? Border.all(color: color.withValues(alpha: 0.4), width: 1)
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 5),
+            Text(label,
+                style: AppText.body(size: 12, weight: FontWeight.w500, color: color)),
+          ],
+        ),
       ),
     );
   }

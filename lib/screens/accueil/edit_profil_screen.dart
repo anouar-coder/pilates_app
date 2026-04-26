@@ -1,8 +1,9 @@
-// lib/screens/accueil/edit_profil_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/profil.dart';
 import '../../services/profil_service.dart';
+import '../../config/app_theme.dart';
 
 class EditProfilScreen extends StatefulWidget {
   final Profil profil;
@@ -23,7 +24,6 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
   String? _photoUrl;
 
   final ProfilService _profilService = ProfilService();
-
   final List<String> _niveaux = ['Débutant', 'Intermédiaire', 'Avancé'];
 
   @override
@@ -39,12 +39,34 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
   Future<void> _changerPhoto() async {
     showModalBottomSheet(
       context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
       builder: (context) => SafeArea(
-        child: Wrap(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.line2,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choisir dans la galerie'),
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.sageBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(Icons.photo_library_outlined, color: AppColors.sageDeep, size: 18),
+              ),
+              title: Text('Choisir dans la galerie', style: AppText.body(size: 15)),
               onTap: () async {
                 Navigator.pop(context);
                 final image = await _profilService.choisirImage();
@@ -52,16 +74,21 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                   setState(() => _isLoading = true);
                   final userId = FirebaseAuth.instance.currentUser!.uid;
                   final url = await _profilService.uploadPhotoProfil(userId, image);
-                  setState(() {
-                    _photoUrl = url;
-                    _isLoading = false;
-                  });
+                  setState(() { _photoUrl = url; _isLoading = false; });
                 }
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Prendre une photo'),
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.sageBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(Icons.camera_alt_outlined, color: AppColors.sageDeep, size: 18),
+              ),
+              title: Text('Prendre une photo', style: AppText.body(size: 15)),
               onTap: () async {
                 Navigator.pop(context);
                 final image = await _profilService.prendrePhoto();
@@ -69,13 +96,11 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                   setState(() => _isLoading = true);
                   final userId = FirebaseAuth.instance.currentUser!.uid;
                   final url = await _profilService.uploadPhotoProfil(userId, image);
-                  setState(() {
-                    _photoUrl = url;
-                    _isLoading = false;
-                  });
+                  setState(() { _photoUrl = url; _isLoading = false; });
                 }
               },
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -84,7 +109,6 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
 
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     final profilModifie = widget.profil.copyWith(
@@ -96,89 +120,101 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     );
 
     final success = await _profilService.updateProfil(profilModifie);
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil mis à jour avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context, true);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erreur lors de la mise à jour'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    if (!mounted) return;
 
     setState(() => _isLoading = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil mis à jour')),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la mise à jour')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Modifier le profil'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.bg,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('MON COMPTE', style: AppText.label(size: 10, color: AppColors.ink3, letterSpacing: 2)),
+            Text(
+              'Modifier le profil',
+              style: GoogleFonts.fraunces(
+                fontSize: 18,
+                fontWeight: FontWeight.w400,
+                fontStyle: FontStyle.italic,
+                color: AppColors.ink,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ],
+        ),
+        toolbarHeight: 64,
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _sauvegarder,
-            child: const Text(
-              'Enregistrer',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Text('Enregistrer',
+                style: AppText.body(size: 14, weight: FontWeight.w600, color: AppColors.sage)),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.sage, strokeWidth: 2))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
               child: Form(
                 key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Photo de profil
+                    // Avatar
                     Center(
                       child: Stack(
                         children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Colors.grey[200],
-                            backgroundImage: _photoUrl != null
-                                ? NetworkImage(_photoUrl!)
-                                : null,
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.sageBg,
+                              boxShadow: AppShadows.sh2,
+                              image: _photoUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(_photoUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
                             child: _photoUrl == null
-                                ? const Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Colors.blue,
-                                  )
+                                ? const Icon(Icons.person_outline_rounded,
+                                    size: 40, color: AppColors.sageDeep)
                                 : null,
                           ),
                           Positioned(
                             bottom: 0,
                             right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 20,
+                            child: GestureDetector(
+                              onTap: _changerPhoto,
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppColors.ink,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.bg, width: 2),
                                 ),
-                                onPressed: _changerPhoto,
+                                child: const Icon(Icons.camera_alt_outlined,
+                                    color: Colors.white, size: 16),
                               ),
                             ),
                           ),
@@ -187,106 +223,79 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                     ),
                     const SizedBox(height: 32),
 
+                    Text('INFORMATIONS', style: AppText.label(size: 10, color: AppColors.ink3, letterSpacing: 2)),
+                    const SizedBox(height: 16),
+
                     // Nom
                     TextFormField(
                       controller: _nomController,
-                      decoration: InputDecoration(
+                      style: AppText.body(size: 15),
+                      decoration: const InputDecoration(
                         labelText: 'Nom complet',
-                        prefixIcon: const Icon(Icons.person),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        prefixIcon: Icon(Icons.person_outline_rounded, size: 20, color: AppColors.ink3),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer votre nom';
-                        }
-                        return null;
-                      },
+                      validator: (v) => (v == null || v.isEmpty) ? 'Champ requis' : null,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Téléphone
                     TextFormField(
                       controller: _telephoneController,
                       keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
+                      style: AppText.body(size: 15),
+                      decoration: const InputDecoration(
                         labelText: 'Téléphone (optionnel)',
-                        prefixIcon: const Icon(Icons.phone),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        prefixIcon: Icon(Icons.phone_outlined, size: 20, color: AppColors.ink3),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Niveau
                     DropdownButtonFormField<String>(
-                      value: _niveauSelectionne,
-                      decoration: InputDecoration(
+                      initialValue: _niveauSelectionne,
+                      style: AppText.body(size: 15),
+                      decoration: const InputDecoration(
                         labelText: 'Niveau',
-                        prefixIcon: const Icon(Icons.trending_up),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        prefixIcon: Icon(Icons.trending_up_rounded, size: 20, color: AppColors.ink3),
                       ),
-                      items: _niveaux.map((niveau) {
-                        return DropdownMenuItem(
-                          value: niveau,
-                          child: Text(niveau),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _niveauSelectionne = value!;
-                        });
-                      },
+                      dropdownColor: AppColors.card,
+                      items: _niveaux.map((n) => DropdownMenuItem(
+                        value: n,
+                        child: Text(n, style: AppText.body(size: 15)),
+                      )).toList(),
+                      onChanged: (v) => setState(() => _niveauSelectionne = v!),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Objectifs
                     TextFormField(
                       controller: _objectifsController,
                       maxLines: 3,
-                      decoration: InputDecoration(
+                      style: AppText.body(size: 15),
+                      decoration: const InputDecoration(
                         labelText: 'Objectifs (optionnel)',
-                        hintText: 'Par exemple: Perdre du poids, gagner en souplesse...',
-                        prefixIcon: const Icon(Icons.flag),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        hintText: 'Ex: Souplesse, gainage, bien-être…',
+                        prefixIcon: Icon(Icons.flag_outlined, size: 20, color: AppColors.ink3),
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Email (non modifiable)
+                    // Email (read-only)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.bg2,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.email, color: Colors.grey),
+                          const Icon(Icons.email_outlined, color: AppColors.ink4, size: 20),
                           const SizedBox(width: 12),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Email',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              Text(
-                                widget.profil.email,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              Text('Email', style: AppText.body(size: 11, color: AppColors.ink4)),
+                              Text(widget.profil.email, style: AppText.body(size: 15, color: AppColors.ink2)),
                             ],
                           ),
                         ],

@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/paiement_service.dart';
-import '../../models/paiement.dart';
 import 'historique_paiements_screen.dart';
 class PacksScreen extends StatefulWidget {
   const PacksScreen({super.key});

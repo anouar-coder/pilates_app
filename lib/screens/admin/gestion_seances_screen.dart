@@ -1,10 +1,8 @@
 // lib/screens/admin/gestion_seances_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/programme_service.dart';
 import '../../models/programme.dart';
 import '../../models/seance.dart';
-import '../../models/exercice.dart';
 import 'ajouter_exercice_screen.dart';
 
 class GestionSeancesScreen extends StatefulWidget {
@@ -44,6 +42,7 @@ class _GestionSeancesScreenState extends State<GestionSeancesScreen> {
 
     final success = await _programmeService.ajouterSeance(widget.programme.id, seance);
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success) {

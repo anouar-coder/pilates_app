@@ -11,6 +11,7 @@ import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/chat/conversations_screen.dart';
 import 'screens/paiement/packs_screen.dart';
 import 'services/notification_service.dart';
+import 'config/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,10 +38,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Pilates Studio',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(),
       initialRoute: '/',
       routes: {
         '/': (context) => const CheckAuthScreen(),

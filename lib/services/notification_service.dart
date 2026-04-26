@@ -67,7 +67,7 @@ class NotificationService {
     print('🔔 Notification affichée: $titre');
   }
 
-  // Récupérer les notifications non lues
+  // Récupérer les notifications non lues (sans orderBy pour éviter l'index composite)
   Stream<QuerySnapshot> getNotificationsNonLues() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return Stream.empty();
@@ -77,7 +77,6 @@ class NotificationService {
         .doc(userId)
         .collection('notifications')
         .where('lu', isEqualTo: false)
-        .orderBy('date', descending: true)
         .snapshots();
   }
 

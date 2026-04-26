@@ -1,11 +1,11 @@
-// lib/screens/avis/ajouter_avis_screen.dart
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/avis_service.dart';
 import '../../models/cours.dart';
+import '../../config/app_theme.dart';
 
 class AjouterAvisScreen extends StatefulWidget {
   final Cours cours;
-
   const AjouterAvisScreen({super.key, required this.cours});
 
   @override
@@ -18,174 +18,18 @@ class _AjouterAvisScreenState extends State<AjouterAvisScreen> {
   final TextEditingController _commentaireController = TextEditingController();
   bool _isLoading = false;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Donner mon avis'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Info cours
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.fitness_center, color: Colors.blue, size: 32),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.cours.titre,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${widget.cours.date.day}/${widget.cours.date.month}/${widget.cours.date.year}',
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Sélection de note
-                  const Text(
-                    'Votre note',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(5, (index) {
-                        final etoile = index + 1;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _note = etoile;
-                            });
-                          },
-                          child: Icon(
-                            etoile <= _note ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                            size: 40,
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      _getNoteTexte(_note),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Commentaire
-                  const Text(
-                    'Commentaire (optionnel)',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _commentaireController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: 'Partagez votre expérience...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Bouton envoyer
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _envoyerAvis,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Envoyer mon avis',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-
   String _getNoteTexte(int note) {
     switch (note) {
-      case 1:
-        return 'Très déçu(e)';
-      case 2:
-        return 'Déçu(e)';
-      case 3:
-        return 'Moyen';
-      case 4:
-        return 'Bon';
-      case 5:
-        return 'Excellent !';
-      default:
-        return '';
+      case 1: return 'Très déçu(e)';
+      case 2: return 'Déçu(e)';
+      case 3: return 'Moyen';
+      case 4: return 'Bon';
+      default: return 'Excellent !';
     }
   }
 
   Future<void> _envoyerAvis() async {
     setState(() => _isLoading = true);
-
     final success = await _avisService.ajouterAvis(
       coursId: widget.cours.id,
       coursTitre: widget.cours.titre,
@@ -194,25 +38,162 @@ class _AjouterAvisScreenState extends State<AjouterAvisScreen> {
           ? _commentaireController.text
           : null,
     );
-
+    if (!mounted) return;
     setState(() => _isLoading = false);
-
-    if (success && mounted) {
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Merci pour votre avis !'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Merci pour votre avis !')),
       );
       Navigator.pop(context);
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ Impossible d\'ajouter un avis'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Impossible d\'ajouter un avis')),
       );
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ÉVALUATION', style: AppText.label(size: 10, color: AppColors.ink3, letterSpacing: 2)),
+            Text(
+              'Mon avis',
+              style: GoogleFonts.fraunces(
+                fontSize: 18,
+                fontWeight: FontWeight.w400,
+                fontStyle: FontStyle.italic,
+                color: AppColors.ink,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ],
+        ),
+        toolbarHeight: 64,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.sage, strokeWidth: 2))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Cours card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      boxShadow: AppShadows.sh1,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.sageBg,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: const Icon(Icons.self_improvement_rounded,
+                              color: AppColors.sageDeep, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.cours.titre,
+                                  style: AppText.body(size: 15, weight: FontWeight.w600)),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${widget.cours.date.day}/${widget.cours.date.month}/${widget.cours.date.year}',
+                                style: AppText.body(size: 13, color: AppColors.ink3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                  Text('VOTRE NOTE', style: AppText.label(size: 10, color: AppColors.ink3, letterSpacing: 2)),
+                  const SizedBox(height: 20),
+
+                  // Stars
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (i) {
+                      final etoile = i + 1;
+                      return GestureDetector(
+                        onTap: () => setState(() => _note = etoile),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Icon(
+                            etoile <= _note ? Icons.star_rounded : Icons.star_outline_rounded,
+                            color: AppColors.clay,
+                            size: 44,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      _getNoteTexte(_note),
+                      style: AppText.body(size: 15, weight: FontWeight.w500, color: AppColors.sageDeep),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                  Text('COMMENTAIRE', style: AppText.label(size: 10, color: AppColors.ink3, letterSpacing: 2)),
+                  const SizedBox(height: 12),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      boxShadow: AppShadows.sh1,
+                    ),
+                    child: TextField(
+                      controller: _commentaireController,
+                      maxLines: 4,
+                      style: AppText.body(size: 15),
+                      decoration: InputDecoration(
+                        hintText: 'Partagez votre expérience (optionnel)…',
+                        hintStyle: AppText.body(size: 15, color: AppColors.ink4),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: const BorderSide(color: AppColors.line, width: 1),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: const BorderSide(color: AppColors.line, width: 1),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: const BorderSide(color: AppColors.sage, width: 1.5),
+                        ),
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                  AppButton(label: 'Envoyer mon avis', onPressed: _envoyerAvis),
+                ],
+              ),
+            ),
+    );
   }
 
   @override
