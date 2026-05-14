@@ -74,7 +74,14 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                   setState(() => _isLoading = true);
                   final userId = FirebaseAuth.instance.currentUser!.uid;
                   final url = await _profilService.uploadPhotoProfil(userId, image);
-                  setState(() { _photoUrl = url; _isLoading = false; });
+                  setState(() { _isLoading = false; });
+                  if (url != null) {
+                    setState(() => _photoUrl = url);
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Erreur lors de l\'upload de la photo')),
+                    );
+                  }
                 }
               },
             ),
@@ -96,7 +103,14 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                   setState(() => _isLoading = true);
                   final userId = FirebaseAuth.instance.currentUser!.uid;
                   final url = await _profilService.uploadPhotoProfil(userId, image);
-                  setState(() { _photoUrl = url; _isLoading = false; });
+                  setState(() { _isLoading = false; });
+                  if (url != null) {
+                    setState(() => _photoUrl = url);
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Erreur lors de l\'upload de la photo')),
+                    );
+                  }
                 }
               },
             ),

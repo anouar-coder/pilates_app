@@ -1,6 +1,7 @@
 // lib/services/admin_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/cours.dart';
 import '../models/reservation.dart';
 import '../models/profil.dart';
@@ -34,9 +35,13 @@ class AdminService {
   // ----- GESTION DES COURS -----
   Stream<List<Cours>> getAllCours() {
     return _coursCollection.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Cours.fromMap(doc.data() as Map<String, dynamic>);
-      }).toList();
+      final now = DateTime.now();
+      final coursList = snapshot.docs
+        .map((doc) => Cours.fromMap(doc.data() as Map<String, dynamic>))
+        .where((cours) => cours.date.add(Duration(minutes: cours.duree)).isAfter(now))
+        .toList();
+      coursList.sort((a, b) => a.date.compareTo(b.date));
+      return coursList;
     });
   }
 
@@ -82,27 +87,34 @@ class AdminService {
       List<Map<String, dynamic>> resultats = [];
 
       for (var doc in reservations.docs) {
-        final reservation = Reservation.fromMap(doc.data() as Map<String, dynamic>);
-        
-        final coursDoc = await _coursCollection.doc(reservation.coursId).get();
-        final cours = coursDoc.exists 
-            ? Cours.fromMap(coursDoc.data() as Map<String, dynamic>)
-            : null;
+        try {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) continue;
+          final reservation = Reservation.fromMap(data);
 
-        final userDoc = await _utilisateursCollection.doc(reservation.utilisateurId).get();
-        final user = userDoc.exists
-            ? Profil.fromMap(reservation.utilisateurId, userDoc.data() as Map<String, dynamic>)
-            : null;
+          final coursDoc = await _coursCollection.doc(reservation.coursId).get();
+          final cours = coursDoc.exists
+              ? Cours.fromMap(coursDoc.data() as Map<String, dynamic>)
+              : null;
 
-        resultats.add({
-          'reservation': reservation,
-          'cours': cours,
-          'utilisateur': user,
-        });
+          final userDoc = await _utilisateursCollection.doc(reservation.utilisateurId).get();
+          final user = userDoc.exists
+              ? Profil.fromMap(reservation.utilisateurId, userDoc.data() as Map<String, dynamic>)
+              : null;
+
+          resultats.add({
+            'reservation': reservation,
+            'cours': cours,
+            'utilisateur': user,
+          });
+        } catch (e) {
+          debugPrint('❌ Réservation ignorée: $e');
+        }
       }
 
       return resultats;
     } catch (e) {
+      debugPrint('❌ Erreur récupération réservations: $e');
       return [];
     }
   }
@@ -128,8 +140,12 @@ class AdminService {
   // ----- STATISTIQUES -----
   Future<AdminStats> getStatistiques() async {
     try {
+      final now = DateTime.now();
       final coursSnapshot = await _coursCollection.get();
-      final totalCours = coursSnapshot.docs.length;
+      final totalCours = coursSnapshot.docs
+          .map((doc) => Cours.fromMap(doc.data() as Map<String, dynamic>))
+          .where((c) => c.date.add(Duration(minutes: c.duree)).isAfter(now))
+          .length;
 
       final reservationsSnapshot = await _reservationsCollection.get();
       final totalReservations = reservationsSnapshot.docs.length;
@@ -139,9 +155,13 @@ class AdminService {
 
       double tauxRemplissage = 0;
       Map<String, int> coursPopulaires = {};
+      int coursFutursCount = 0;
 
       for (var doc in coursSnapshot.docs) {
         final cours = Cours.fromMap(doc.data() as Map<String, dynamic>);
+        if (cours.date.add(Duration(minutes: cours.duree)).isBefore(now)) continue;
+
+        coursFutursCount++;
         final placesMax = cours.placesMax;
         final placesOccupees = placesMax - cours.placesRestantes;
         
@@ -155,9 +175,8 @@ class AdminService {
         coursPopulaires[cours.titre] = reservationsCours.docs.length;
       }
 
-      tauxRemplissage = totalCours > 0 ? tauxRemplissage / totalCours : 0;
+      tauxRemplissage = coursFutursCount > 0 ? tauxRemplissage / coursFutursCount : 0;
 
-      // Trier et garder les 5 plus populaires
       var sortedEntries = coursPopulaires.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
       
@@ -169,7 +188,7 @@ class AdminService {
         totalUtilisateurs: totalUtilisateurs,
         tauxRemplissage: tauxRemplissage,
         coursPopulaires: coursPopulaires,
-        revenuTotal: totalReservations * 25.0, // Prix fictif
+        revenuTotal: totalReservations * 25.0,
       );
     } catch (e) {
       return AdminStats(

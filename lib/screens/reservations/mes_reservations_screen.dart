@@ -105,8 +105,11 @@ class _MesReservationsScreenState extends State<MesReservationsScreen> {
                       return FutureBuilder<Cours?>(
                         future: _firebaseService.getCoursById(reservation.coursId),
                         builder: (context, coursSnapshot) {
-                          if (!coursSnapshot.hasData) {
+                          if (coursSnapshot.connectionState == ConnectionState.waiting) {
                             return _LoadingCard();
+                          }
+                          if (coursSnapshot.data == null) {
+                            return const SizedBox.shrink();
                           }
                           final cours = coursSnapshot.data!;
                           return _ReservationCard(
@@ -162,7 +165,7 @@ class _ReservationCard extends StatelessWidget {
     required this.firebaseService,
   });
 
-  bool get _isPast => cours.date.isBefore(DateTime.now());
+  bool get _isPast => cours.date.add(Duration(minutes: cours.duree)).isBefore(DateTime.now());
 
   Color get _niveauDot {
     switch (cours.niveau) {

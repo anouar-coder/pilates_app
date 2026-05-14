@@ -1,6 +1,7 @@
 // lib/services/profil_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/profil.dart';
@@ -35,8 +36,23 @@ class ProfilService {
 
   // Version simplifiée pour la photo (à implémenter plus tard)
   Future<String?> uploadPhotoProfil(String userId, XFile imageFile) async {
-    // Pour l'instant, retourne null (pas de storage)
-    return null;
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profils')
+          .child('$userId.jpg');
+      await storageRef.putData(await imageFile.readAsBytes());
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      await _utilisateursCollection.doc(userId).update({
+        'photoUrl': downloadUrl,
+      });
+
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('❌ Erreur upload photo: $e');
+      return null;
+    }
   }
 
   // Choisir une image
@@ -64,6 +80,7 @@ class ProfilService {
   // Calculer les statistiques
   Future<Map<String, dynamic>> calculerStatistiques(String userId) async {
     try {
+      final now = DateTime.now();
       final reservations = await FirebaseFirestore.instance
           .collection('reservations')
           .where('utilisateurId', isEqualTo: userId)
@@ -84,11 +101,15 @@ class ProfilService {
 
         if (coursDoc.exists) {
           final coursData = coursDoc.data() as Map<String, dynamic>;
-          final dateCours = DateTime.parse(coursData['date']);
-          
-          if (dateCours.isBefore(DateTime.now())) {
+          final dateField = coursData['date'];
+          final dateCours = dateField is Timestamp
+              ? dateField.toDate()
+              : DateTime.parse(dateField as String);
+          final duree = (coursData['duree'] as int?) ?? 0;
+
+          if (dateCours.add(Duration(minutes: duree)).isBefore(now)) {
             coursPasses++;
-            totalHeures += (coursData['duree'] as int?) ?? 0;
+            totalHeures += duree;
           }
         }
       }

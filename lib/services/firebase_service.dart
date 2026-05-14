@@ -18,9 +18,13 @@ class FirebaseService {
   
   Stream<List<Cours>> getCours() {
     return _coursCollection.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Cours.fromMap(doc.data() as Map<String, dynamic>);
-      }).toList();
+      final now = DateTime.now();
+      final coursList = snapshot.docs
+        .map((doc) => Cours.fromMap(doc.data() as Map<String, dynamic>))
+        .where((cours) => cours.date.add(Duration(minutes: cours.duree)).isAfter(now))
+        .toList();
+      coursList.sort((a, b) => a.date.compareTo(b.date));
+      return coursList;
     });
   }
 
@@ -100,7 +104,7 @@ class FirebaseService {
       
       // Mettre à jour le nombre de places
       await _coursCollection.doc(coursId).update({
-        'placesRestantes': cours.placesRestantes - 1,
+        'placesRestantes': FieldValue.increment(-1),
       });
       debugPrint('✅ Places mises à jour: ${cours.placesRestantes - 1}');
 
@@ -115,19 +119,46 @@ class FirebaseService {
     try {
       final coursDoc = await _coursCollection.doc(coursId).get();
       if (!coursDoc.exists) return false;
-      
-      final cours = Cours.fromMap(coursDoc.data() as Map<String, dynamic>);
+
+      // Récupérer l'utilisateur avant de supprimer la réservation
+      final reservationDoc = await _reservationsCollection.doc(reservationId).get();
+      if (!reservationDoc.exists) return false;
+      final userId = (reservationDoc.data() as Map<String, dynamic>)['utilisateurId'] as String?;
 
       await _reservationsCollection.doc(reservationId).delete();
       
       await _coursCollection.doc(coursId).update({
-        'placesRestantes': cours.placesRestantes + 1,
+        'placesRestantes': FieldValue.increment(1),
       });
 
-      debugPrint('✅ Annulation réussie');
+      // Retirer l'utilisateur de la liste d'attente s'il y est
+      if (userId != null) {
+        final attenteQuery = await FirebaseFirestore.instance
+            .collection('cours')
+            .doc(coursId)
+            .collection('attente')
+            .where('utilisateurId', isEqualTo: userId)
+            .where('statut', isEqualTo: 'enAttente')
+            .limit(1)
+            .get();
+        if (attenteQuery.docs.isNotEmpty) {
+          await attenteQuery.docs.first.reference.update({'statut': 'annule'});
+        }
+      }
 
-      // Déclencher la vérification de la liste d'attente
-      await AttenteService().verifierPlacesDisponibles(coursId);
+      // Vérifier s'il y a d'autres personnes en attente
+      final autresAttente = await FirebaseFirestore.instance
+          .collection('cours')
+          .doc(coursId)
+          .collection('attente')
+          .where('statut', isEqualTo: 'enAttente')
+          .get();
+      final nbEnAttente = autresAttente.docs.length;
+
+      if (nbEnAttente > 0) {
+        // Déclencher la vérification pour les personnes en attente
+        await AttenteService().verifierPlacesDisponibles(coursId);
+      }
 
       return true;
     } catch (e) {

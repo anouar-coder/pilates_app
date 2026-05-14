@@ -1,4 +1,6 @@
 //lib/models/cours.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Cours {
   final String id;
   final String titre;
@@ -41,18 +43,22 @@ class Cours {
         nombreAvis = 0;              // ← NOUVEAU
 
   factory Cours.fromMap(Map<String, dynamic> map) {
+    final dateField = map['date'];
+    final date = dateField is Timestamp
+        ? dateField.toDate()
+        : DateTime.parse(dateField ?? DateTime.now().toIso8601String());
     return Cours(
       id: map['id'] ?? '',
       titre: map['titre'] ?? '',
-      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
+      date: date,
       duree: map['duree'] ?? 0,
       placesMax: map['placesMax'] ?? 0,
       placesRestantes: map['placesRestantes'] ?? 0,
       niveau: map['niveau'] ?? '',
       coach: map['coach'] ?? '',
       description: map['description'] ?? '',
-      noteMoyenne: (map['noteMoyenne'] ?? 0).toDouble(),      // ← NOUVEAU
-      nombreAvis: map['nombreAvis'] ?? 0,                      // ← NOUVEAU
+      noteMoyenne: (map['noteMoyenne'] ?? 0).toDouble(),
+      nombreAvis: map['nombreAvis'] ?? 0,
     );
   }
 

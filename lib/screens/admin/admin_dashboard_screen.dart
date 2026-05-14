@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../widgets/assistant_bubble.dart';
@@ -166,145 +168,181 @@ class _AdminTab extends StatelessWidget {
 }
 
 // ── Stats screen ──────────────────────────────────────────────────────────────
-class StatsScreen extends StatelessWidget {
+class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<AdminStats>(
-      future: AdminService().getStatistiques(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: AppColors.sage, strokeWidth: 2));
-        }
-        if (snapshot.hasError) {
-          return Center(
-              child: Text('Erreur: ${snapshot.error}',
-                  style: AppText.body(size: 14, color: AppColors.danger)));
-        }
-        final stats = snapshot.data!;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Vue d\'ensemble',
-                style: GoogleFonts.fraunces(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w400,
-                  fontStyle: FontStyle.italic,
-                  color: AppColors.ink,
-                  letterSpacing: -0.6,
-                ),
-              ),
-              const SizedBox(height: 20),
+  State<StatsScreen> createState() => _StatsScreenState();
+}
 
-              // Stat grid
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.3,
+class _StatsScreenState extends State<StatsScreen> {
+  final AdminService _adminService = AdminService();
+  AdminStats? _stats;
+  bool _loading = true;
+  StreamSubscription? _coursSub;
+  StreamSubscription? _reservationsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerStats();
+    _coursSub = FirebaseFirestore.instance
+        .collection('cours')
+        .snapshots()
+        .listen((_) => _chargerStats());
+    _reservationsSub = FirebaseFirestore.instance
+        .collection('reservations')
+        .snapshots()
+        .listen((_) => _chargerStats());
+  }
+
+  @override
+  void dispose() {
+    _coursSub?.cancel();
+    _reservationsSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _chargerStats() async {
+    final stats = await _adminService.getStatistiques();
+    if (mounted) setState(() { _stats = stats; _loading = false; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.sage, strokeWidth: 2));
+    }
+    if (_stats == null) {
+      return Center(
+          child: Text('Erreur: impossible de charger les statistiques',
+              style: AppText.body(size: 14, color: AppColors.danger)));
+    }
+    final stats = _stats!;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: RefreshIndicator(
+        color: AppColors.sage,
+        onRefresh: _chargerStats,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vue d\'ensemble',
+              style: GoogleFonts.fraunces(
+                fontSize: 24,
+                fontWeight: FontWeight.w400,
+                fontStyle: FontStyle.italic,
+                color: AppColors.ink,
+                letterSpacing: -0.6,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Stat grid
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
+              children: [
+                _StatCard(
+                  value: '${stats.totalCours}',
+                  label: 'Cours',
+                  icon: Icons.fitness_center_rounded,
+                  color: AppColors.sage,
+                ),
+                _StatCard(
+                  value: '${stats.totalReservations}',
+                  label: 'Réservations',
+                  icon: Icons.bookmark_rounded,
+                  color: AppColors.clay,
+                ),
+                _StatCard(
+                  value: '${stats.totalUtilisateurs}',
+                  label: 'Membres',
+                  icon: Icons.people_rounded,
+                  color: AppColors.sageDeep,
+                ),
+                _StatCard(
+                  value: '${stats.tauxRemplissage.toStringAsFixed(0)}%',
+                  label: 'Remplissage',
+                  icon: Icons.donut_large_rounded,
+                  color: AppColors.warn,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Revenue card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.sageDeep,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                boxShadow: AppShadows.sh2,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _StatCard(
-                    value: '${stats.totalCours}',
-                    label: 'Cours',
-                    icon: Icons.fitness_center_rounded,
-                    color: AppColors.sage,
+                  Text(
+                    'REVENUS TOTAUX',
+                    style: AppText.label(size: 11, color: Colors.white.withValues(alpha: 0.7), letterSpacing: 2),
                   ),
-                  _StatCard(
-                    value: '${stats.totalReservations}',
-                    label: 'Réservations',
-                    icon: Icons.bookmark_rounded,
-                    color: AppColors.clay,
-                  ),
-                  _StatCard(
-                    value: '${stats.totalUtilisateurs}',
-                    label: 'Membres',
-                    icon: Icons.people_rounded,
-                    color: AppColors.sageDeep,
-                  ),
-                  _StatCard(
-                    value: '${stats.tauxRemplissage.toStringAsFixed(0)}%',
-                    label: 'Remplissage',
-                    icon: Icons.donut_large_rounded,
-                    color: AppColors.warn,
+                  const SizedBox(height: 8),
+                  Text(
+                    '${stats.revenuTotal.toStringAsFixed(2)} €',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w400,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.white,
+                      letterSpacing: -0.8,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+            ),
 
-              // Revenue card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.sageDeep,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  boxShadow: AppShadows.sh2,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'REVENUS TOTAUX',
-                      style: AppText.label(size: 11, color: Colors.white.withValues(alpha: 0.7), letterSpacing: 2),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${stats.revenuTotal.toStringAsFixed(2)} €',
-                      style: GoogleFonts.fraunces(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w400,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white,
-                        letterSpacing: -0.8,
+            if (stats.coursPopulaires.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              const AppSectionHeader(title: 'Cours populaires'),
+              ...stats.coursPopulaires.entries.take(3).map(
+                    (c) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        boxShadow: AppShadows.sh1,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.sage,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(c.key, style: AppText.body(size: 14, weight: FontWeight.w500)),
+                          ),
+                          Text('${c.value}', style: AppText.body(size: 13, color: AppColors.ink3)),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              if (stats.coursPopulaires.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                const AppSectionHeader(title: 'Cours populaires'),
-                ...stats.coursPopulaires.entries.take(3).map(
-                      (c) => Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          boxShadow: AppShadows.sh1,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.sage,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(c.key, style: AppText.body(size: 14, weight: FontWeight.w500)),
-                            ),
-                            Text('${c.value}', style: AppText.body(size: 13, color: AppColors.ink3)),
-                          ],
-                        ),
-                      ),
-                    ),
-              ],
+                  ),
             ],
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

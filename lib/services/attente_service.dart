@@ -27,6 +27,19 @@ class AttenteService {
 
       final cours = Cours.fromMap(coursDoc.data() as Map<String, dynamic>);
       
+      // Vérifier si l'utilisateur a déjà une réservation active pour ce cours
+      final existingReservation = await _firestore
+          .collection('reservations')
+          .where('utilisateurId', isEqualTo: user.uid)
+          .where('coursId', isEqualTo: coursId)
+          .limit(1)
+          .get();
+
+      if (existingReservation.docs.isNotEmpty) {
+        debugPrint('❌ Déjà une réservation active pour ce cours');
+        return false;
+      }
+
       // Vérifier si l'utilisateur est déjà dans la liste d'attente
       final existingAttente = await _firestore
           .collection('cours')
@@ -131,19 +144,39 @@ class AttenteService {
       
       // Si des places se sont libérées
       if (cours.placesRestantes > 0) {
-        // Récupérer les personnes en attente (par ordre de position)
+        // Récupérer les personnes en attente
         final attenteQuery = await _firestore
             .collection('cours')
             .doc(coursId)
             .collection('attente')
             .where('statut', isEqualTo: 'enAttente')
-            .orderBy('position')
-            .limit(cours.placesRestantes)
             .get();
 
-        for (var doc in attenteQuery.docs) {
+        final attenteDocs = attenteQuery.docs.toList();
+        attenteDocs.sort((a, b) {
+          final posA = (a.data()['position'] as num?)?.toInt() ?? 0;
+          final posB = (b.data()['position'] as num?)?.toInt() ?? 0;
+          return posA.compareTo(posB);
+        });
+
+        final aNotifier = attenteDocs.take(cours.placesRestantes);
+
+        for (var doc in aNotifier) {
           final attente = Attente.fromMap(doc.id, doc.data());
-          
+
+          // Vérifier que l'utilisateur n'a pas déjà une réservation active
+          final alreadyReserved = await _firestore
+              .collection('reservations')
+              .where('utilisateurId', isEqualTo: attente.utilisateurId)
+              .where('coursId', isEqualTo: coursId)
+              .limit(1)
+              .get();
+
+          if (alreadyReserved.docs.isNotEmpty) {
+            await doc.reference.update({'statut': 'reserve'});
+            continue;
+          }
+
           // Marquer comme notifié
           await doc.reference.update({
             'statut': 'notifie',
@@ -168,10 +201,7 @@ class AttenteService {
           });
         }
 
-        // Mettre à jour le compteur de places
-        await _firestore.collection('cours').doc(coursId).update({
-          'placesRestantes': cours.placesRestantes - attenteQuery.docs.length,
-        });
+
       }
     } catch (e) {
       debugPrint('❌ Erreur vérification places: $e');
@@ -186,11 +216,17 @@ class AttenteService {
           .doc(coursId)
           .collection('attente')
           .where('statut', isEqualTo: 'enAttente')
-          .orderBy('position')
           .get();
 
+      final docs = attenteQuery.docs.toList();
+      docs.sort((a, b) {
+        final posA = (a.data()['position'] as num?)?.toInt() ?? 0;
+        final posB = (b.data()['position'] as num?)?.toInt() ?? 0;
+        return posA.compareTo(posB);
+      });
+
       int nouvellePosition = 1;
-      for (var doc in attenteQuery.docs) {
+      for (var doc in docs) {
         await doc.reference.update({'position': nouvellePosition});
         nouvellePosition++;
       }
@@ -206,12 +242,13 @@ class AttenteService {
         .doc(coursId)
         .collection('attente')
         .where('statut', whereIn: ['enAttente', 'notifie'])
-        .orderBy('position')
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
+          final list = snapshot.docs.map((doc) {
             return Attente.fromMap(doc.id, doc.data());
           }).toList();
+          list.sort((a, b) => a.position.compareTo(b.position));
+          return list;
         });
   }
 

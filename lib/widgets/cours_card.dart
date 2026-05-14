@@ -132,9 +132,25 @@ class CoursCard extends StatelessWidget {
                   const SizedBox(width: 14),
 
                   // Action button
-                  isFull
-                      ? _WaitlistButton(cours: cours)
-                      : _ReserveButton(cours: cours),
+                  FutureBuilder<bool>(
+                    future: FirebaseFirestore.instance
+                        .collection('reservations')
+                        .where('utilisateurId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                        .where('coursId', isEqualTo: cours.id)
+                        .get()
+                        .then((snap) => snap.docs.isNotEmpty),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const SizedBox(width: 90, height: 34);
+                      }
+                      if (snapshot.data == true) {
+                        return _ReservedBadge();
+                      }
+                      return isFull
+                          ? _WaitlistButton(cours: cours)
+                          : _ReserveButton(cours: cours);
+                    },
+                  ),
                 ],
               ),
             ],
@@ -338,5 +354,35 @@ class _WaitlistButton extends StatelessWidget {
         );
       }
     }
+  }
+}
+
+// ── Reserved badge ────────────────────────────────────────────────────────────
+class _ReservedBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.sageBg,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.sage, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_rounded, size: 14, color: AppColors.sageDeep),
+          const SizedBox(width: 4),
+          Text(
+            'Réservé',
+            style: AppText.body(
+              size: 12,
+              weight: FontWeight.w500,
+              color: AppColors.sageDeep,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

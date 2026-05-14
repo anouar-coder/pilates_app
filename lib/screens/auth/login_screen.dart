@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 
@@ -25,7 +26,16 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      if (mounted) Navigator.pushReplacementNamed(context, '/accueil');
+      if (mounted) {
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId == null) {
+          Navigator.pushReplacementNamed(context, '/accueil');
+          return;
+        }
+        final doc = await FirebaseFirestore.instance.collection('utilisateurs').doc(userId).get();
+        final isAdmin = doc.exists && (doc.data()?['role'] == 'admin');
+        if (mounted) Navigator.pushReplacementNamed(context, isAdmin ? '/admin' : '/accueil');
+      }
     } on FirebaseAuthException catch (e) {
       String message = 'Erreur de connexion';
       if (e.code == 'user-not-found') message = 'Utilisateur non trouvé';

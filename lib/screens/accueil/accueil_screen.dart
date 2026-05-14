@@ -42,6 +42,23 @@ class _AccueilScreenState extends State<AccueilScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 56,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 22),
+            tooltip: 'Déconnexion',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: Stack(
         children: [
           _screens[_selectedIndex],

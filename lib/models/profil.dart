@@ -1,4 +1,6 @@
 //lib/models/profil.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Profil {
   final String id;
   final String nom;
@@ -33,6 +35,10 @@ class Profil {
   });
 
   factory Profil.fromMap(String id, Map<String, dynamic> map) {
+    final dateField = map['dateInscription'];
+    final dateInscription = dateField is Timestamp
+        ? dateField.toDate()
+        : DateTime.parse(dateField ?? DateTime.now().toIso8601String());
     return Profil(
       id: id,
       nom: map['nom'] ?? '',
@@ -41,13 +47,13 @@ class Profil {
       photoUrl: map['photoUrl'],
       niveau: map['niveau'] ?? 'Débutant',
       objectifs: map['objectifs'],
-      dateInscription: DateTime.parse(map['dateInscription'] ?? DateTime.now().toIso8601String()),
+      dateInscription: dateInscription,
       coursSuivis: map['coursSuivis'] ?? 0,
       totalHeures: map['totalHeures'] ?? 0,
       coursReserves: map['coursReserves'] ?? 0,
       coursAnnules: map['coursAnnules'] ?? 0,
       noteMoyenne: (map['noteMoyenne'] ?? 0.0).toDouble(),
-      role: map['role'] ?? 'client', // ← AJOUTE CETTE LIGNE
+      role: map['role'] ?? 'client',
     );
   }
 

@@ -1,4 +1,6 @@
 //lib/models/reservation.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Reservation {
   final String id;
   final String utilisateurId;
@@ -15,12 +17,18 @@ class Reservation {
   });
 
   factory Reservation.fromMap(Map<String, dynamic> map) {
+    final dateField = map['dateReservation'];
+    final dateReservation = dateField is Timestamp
+        ? dateField.toDate()
+        : dateField is String
+            ? DateTime.parse(dateField)
+            : DateTime.now();
     return Reservation(
-      id: map['id'],
-      utilisateurId: map['utilisateurId'],
-      coursId: map['coursId'],
-      dateReservation: DateTime.parse(map['dateReservation']),
-      estPaye: map['estPaye'],
+      id: map['id'] ?? '',
+      utilisateurId: map['utilisateurId'] ?? '',
+      coursId: map['coursId'] ?? '',
+      dateReservation: dateReservation,
+      estPaye: map['estPaye'] ?? false,
     );
   }
 
