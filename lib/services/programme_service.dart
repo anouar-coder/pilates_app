@@ -1,6 +1,7 @@
 // lib/services/programme_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/programme.dart';
 import '../models/exercice.dart';
 import '../models/seance.dart';
@@ -17,7 +18,7 @@ class ProgrammeService {
       final docRef = await _firestore.collection('programmes').add(programme.toMap());
       return docRef.id;
     } catch (e) {
-      print('❌ Erreur création programme: $e');
+      debugPrint('❌ Erreur création programme: $e');
       return null;
     }
   }
@@ -32,7 +33,7 @@ class ProgrammeService {
           .add(seance.toMap());
       return true;
     } catch (e) {
-      print('❌ Erreur ajout séance: $e');
+      debugPrint('❌ Erreur ajout séance: $e');
       return false;
     }
   }
@@ -49,7 +50,32 @@ class ProgrammeService {
           .add(exercice.toMap());
       return true;
     } catch (e) {
-      print('❌ Erreur ajout exercice: $e');
+      debugPrint('❌ Erreur ajout exercice: $e');
+      return false;
+    }
+  }
+
+  // Supprimer une seance et ses exercices.
+  Future<bool> supprimerSeance(String programmeId, String seanceId) async {
+    try {
+      final seanceRef = _firestore
+          .collection('programmes')
+          .doc(programmeId)
+          .collection('seances')
+          .doc(seanceId);
+
+      final exercices = await seanceRef.collection('exercices').get();
+      final batch = _firestore.batch();
+
+      for (final doc in exercices.docs) {
+        batch.delete(doc.reference);
+      }
+
+      batch.delete(seanceRef);
+      await batch.commit();
+      return true;
+    } catch (e) {
+      debugPrint('Erreur suppression seance: $e');
       return false;
     }
   }
@@ -120,7 +146,7 @@ class ProgrammeService {
           });
       return true;
     } catch (e) {
-      print('❌ Erreur assignation programme: $e');
+      debugPrint('❌ Erreur assignation programme: $e');
       return false;
     }
   }
@@ -150,7 +176,7 @@ class ProgrammeService {
           });
       return true;
     } catch (e) {
-      print('❌ Erreur marquage exercice: $e');
+      debugPrint('❌ Erreur marquage exercice: $e');
       return false;
     }
   }
@@ -207,7 +233,7 @@ class ProgrammeService {
           .update(programme.toMap());
       return true;
     } catch (e) {
-      print('❌ Erreur mise à jour: $e');
+      debugPrint('❌ Erreur mise à jour: $e');
       return false;
     }
   }
@@ -218,8 +244,9 @@ class ProgrammeService {
       await _firestore.collection('programmes').doc(programmeId).delete();
       return true;
     } catch (e) {
-      print('❌ Erreur suppression: $e');
+      debugPrint('❌ Erreur suppression: $e');
       return false;
     }
   }
 }
+

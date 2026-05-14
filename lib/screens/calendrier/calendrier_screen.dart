@@ -63,6 +63,9 @@ class _CalendrierScreenState extends State<CalendrierScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final compactCalendar = screenHeight < 760;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -117,6 +120,8 @@ class _CalendrierScreenState extends State<CalendrierScreen> {
                 firstDay: DateTime.utc(2024, 1, 1),
                 lastDay: DateTime.utc(2026, 12, 31),
                 focusedDay: _focusedDay,
+                rowHeight: compactCalendar ? 36 : 42,
+                daysOfWeekHeight: compactCalendar ? 22 : 28,
                 selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                 eventLoader: _getEventsForDay,
                 onDaySelected: _onDaySelected,
@@ -145,7 +150,7 @@ class _CalendrierScreenState extends State<CalendrierScreen> {
                   markersMaxCount: 3,
                   markerSize: 5,
                   markerMargin: const EdgeInsets.symmetric(horizontal: 0.5),
-                  cellMargin: const EdgeInsets.all(4),
+                  cellMargin: EdgeInsets.all(compactCalendar ? 2 : 4),
                 ),
                 daysOfWeekStyle: DaysOfWeekStyle(
                   weekdayStyle: AppText.body(size: 12, weight: FontWeight.w500, color: AppColors.ink3),
@@ -157,7 +162,10 @@ class _CalendrierScreenState extends State<CalendrierScreen> {
                   titleTextStyle: AppText.body(size: 15, weight: FontWeight.w600),
                   leftChevronIcon: const Icon(Icons.chevron_left_rounded, color: AppColors.ink2, size: 22),
                   rightChevronIcon: const Icon(Icons.chevron_right_rounded, color: AppColors.ink2, size: 22),
-                  headerPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  headerPadding: EdgeInsets.symmetric(
+                    vertical: compactCalendar ? 2 : 8,
+                    horizontal: 8,
+                  ),
                 ),
                 calendarBuilders: CalendarBuilders(
                   markerBuilder: (context, date, events) {

@@ -2,6 +2,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -45,7 +46,7 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
     
-    print('✅ Notifications locales initialisées');
+    debugPrint('✅ Notifications locales initialisées');
   }
 
   // Afficher une notification locale
@@ -64,7 +65,7 @@ class NotificationService {
         iOS: const DarwinNotificationDetails(),
       ),
     );
-    print('🔔 Notification affichée: $titre');
+    debugPrint('🔔 Notification affichée: $titre');
   }
 
   // Récupérer les notifications non lues (sans orderBy pour éviter l'index composite)

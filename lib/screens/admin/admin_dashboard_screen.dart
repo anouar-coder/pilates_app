@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
+import '../../widgets/assistant_bubble.dart';
 import '../../services/admin_service.dart';
 import '../../models/admin.dart';
 import 'gestion_cours_screen.dart';
@@ -90,7 +91,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      body: _screens[_selectedIndex],
+      body: Stack(
+        children: [
+          _screens[_selectedIndex],
+          const AssistantBubble(bottom: 94),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppColors.bg,

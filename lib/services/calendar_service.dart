@@ -1,5 +1,6 @@
 // lib/services/calendar_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/cours.dart';
 import '../models/calendar_event.dart';
 
@@ -31,7 +32,7 @@ class CalendarService {
         return CalendarEvent.fromCours(cours);
       }).toList();
     } catch (e) {
-      print('❌ Erreur récupération événements: $e');
+      debugPrint('❌ Erreur récupération événements: $e');
       return [];
     }
   }
@@ -61,7 +62,7 @@ class CalendarService {
 
       return events;
     } catch (e) {
-      print('❌ Erreur récupération événements mois: $e');
+      debugPrint('❌ Erreur récupération événements mois: $e');
       return {};
     }
   }

@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/cours_card.dart';
+import '../../widgets/assistant_bubble.dart';
 import '../../services/firebase_service.dart';
 import '../../services/profil_service.dart';
 import '../../services/notification_service.dart';
@@ -41,7 +42,12 @@ class _AccueilScreenState extends State<AccueilScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: _screens[_selectedIndex],
+      body: Stack(
+        children: [
+          _screens[_selectedIndex],
+          const AssistantBubble(bottom: 96),
+        ],
+      ),
       bottomNavigationBar: _PilateBottomNav(
         selectedIndex: _selectedIndex,
         onTap: (i) => setState(() => _selectedIndex = i),

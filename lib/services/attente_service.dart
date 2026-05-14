@@ -1,6 +1,7 @@
 // lib/services/attente_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/attente.dart';
 import '../models/cours.dart';
 
@@ -12,7 +13,7 @@ class AttenteService {
   Future<bool> rejoindreListeAttente(String coursId) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('❌ Utilisateur non connecté');
+      debugPrint('❌ Utilisateur non connecté');
       return false;
     }
 
@@ -20,7 +21,7 @@ class AttenteService {
       // Récupérer les infos du cours
       final coursDoc = await _firestore.collection('cours').doc(coursId).get();
       if (!coursDoc.exists) {
-        print('❌ Cours non trouvé');
+        debugPrint('❌ Cours non trouvé');
         return false;
       }
 
@@ -37,7 +38,7 @@ class AttenteService {
           .get();
 
       if (existingAttente.docs.isNotEmpty) {
-        print('❌ Déjà dans la liste d\'attente');
+        debugPrint('❌ Déjà dans la liste d\'attente');
         return false;
       }
 
@@ -78,11 +79,11 @@ class AttenteService {
           .collection('attente')
           .add(attente.toMap());
 
-      print('✅ Inscrit à la liste d\'attente en position $position');
+      debugPrint('✅ Inscrit à la liste d\'attente en position $position');
       return true;
 
     } catch (e) {
-      print('❌ Erreur inscription liste attente: $e');
+      debugPrint('❌ Erreur inscription liste attente: $e');
       return false;
     }
   }
@@ -114,7 +115,7 @@ class AttenteService {
 
       return true;
     } catch (e) {
-      print('❌ Erreur sortie liste attente: $e');
+      debugPrint('❌ Erreur sortie liste attente: $e');
       return false;
     }
   }
@@ -173,7 +174,7 @@ class AttenteService {
         });
       }
     } catch (e) {
-      print('❌ Erreur vérification places: $e');
+      debugPrint('❌ Erreur vérification places: $e');
     }
   }
 
@@ -194,7 +195,7 @@ class AttenteService {
         nouvellePosition++;
       }
     } catch (e) {
-      print('❌ Erreur recalcul positions: $e');
+      debugPrint('❌ Erreur recalcul positions: $e');
     }
   }
 
@@ -260,7 +261,7 @@ class AttenteService {
 
       return true;
     } catch (e) {
-      print('❌ Erreur traitement réservation: $e');
+      debugPrint('❌ Erreur traitement réservation: $e');
       return false;
     }
   }
@@ -302,7 +303,7 @@ class AttenteService {
         await verifierPlacesDisponibles(coursId);
       }
     } catch (e) {
-      print('❌ Erreur nettoyage notifications: $e');
+      debugPrint('❌ Erreur nettoyage notifications: $e');
     }
   }
 }

@@ -1,5 +1,6 @@
 // lib/screens/admin/gestion_seances_screen.dart
 import 'package:flutter/material.dart';
+import '../../config/app_theme.dart';
 import '../../services/programme_service.dart';
 import '../../models/programme.dart';
 import '../../models/seance.dart';
@@ -22,7 +23,9 @@ class _GestionSeancesScreenState extends State<GestionSeancesScreen> {
   bool _isLoading = false;
 
   Future<void> _ajouterSeance() async {
-    if (_titreController.text.isEmpty || _descriptionController.text.isEmpty) {
+    if (_titreController.text.trim().isEmpty ||
+        _descriptionController.text.trim().isEmpty ||
+        _jourController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Veuillez remplir tous les champs')),
       );
@@ -35,8 +38,8 @@ class _GestionSeancesScreenState extends State<GestionSeancesScreen> {
       id: '',
       programmeId: widget.programme.id,
       jour: int.tryParse(_jourController.text) ?? 1,
-      titre: _titreController.text,
-      description: _descriptionController.text,
+      titre: _titreController.text.trim(),
+      description: _descriptionController.text.trim(),
       exercices: [],
     );
 
@@ -45,112 +48,143 @@ class _GestionSeancesScreenState extends State<GestionSeancesScreen> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Seance ajoutee' : 'Ajout impossible'),
+        backgroundColor: success ? AppColors.ink : AppColors.danger,
+      ),
+    );
+
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Séance ajoutée'), backgroundColor: Colors.green),
-      );
       _titreController.clear();
       _descriptionController.clear();
       _jourController.clear();
     }
   }
 
+  Future<void> _supprimerSeance(Seance seance) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Supprimer la seance', style: AppText.body(size: 18, weight: FontWeight.w600)),
+        content: Text(
+          'Voulez-vous supprimer "${seance.titre}" et tous ses exercices ?',
+          style: AppText.body(size: 15, color: AppColors.ink2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Supprimer',
+              style: AppText.body(size: 14, weight: FontWeight.w600, color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final success = await _programmeService.supprimerSeance(widget.programme.id, seance.id);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Seance supprimee' : 'Suppression impossible'),
+        backgroundColor: success ? AppColors.ink : AppColors.danger,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _titreController.dispose();
+    _descriptionController.dispose();
+    _jourController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text('Séances - ${widget.programme.titre}'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: Text('Seances - ${widget.programme.titre}'),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.sage))
           : Column(
               children: [
-                // Formulaire d'ajout
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.grey[100],
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _jourController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Jour',
-                          hintText: '1, 2, 3...',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _titreController,
-                        decoration: InputDecoration(
-                          labelText: 'Titre de la séance',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _descriptionController,
-                        maxLines: 2,
-                        decoration: InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: _ajouterSeance,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          minimumSize: const Size(double.infinity, 45),
-                        ),
-                        child: const Text('Ajouter la séance'),
-                      ),
-                    ],
-                  ),
+                _AddSeanceForm(
+                  jourController: _jourController,
+                  titreController: _titreController,
+                  descriptionController: _descriptionController,
+                  onSubmit: _ajouterSeance,
                 ),
-
-                // Liste des séances existantes
+                const Divider(height: 1, color: AppColors.line),
                 Expanded(
                   child: StreamBuilder<List<Seance>>(
                     stream: _programmeService.getSeances(widget.programme.id),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator(color: AppColors.sage));
                       }
 
                       if (snapshot.hasError) {
-                        return Center(child: Text('Erreur: ${snapshot.error}'));
+                        return Center(
+                          child: Text(
+                            'Erreur: ${snapshot.error}',
+                            style: AppText.body(color: AppColors.danger),
+                            textAlign: TextAlign.center,
+                          ),
+                        );
                       }
 
                       final seances = snapshot.data ?? [];
 
                       if (seances.isEmpty) {
-                        return const Center(
-                          child: Text('Aucune séance pour ce programme'),
+                        return Center(
+                          child: Text(
+                            'Aucune seance pour ce programme',
+                            style: AppText.body(size: 15, color: AppColors.ink3),
+                          ),
                         );
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(8),
+                      return ListView.separated(
+                        padding: const EdgeInsets.all(16),
                         itemCount: seances.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final seance = seances[index];
-                          return Card(
+                          return AppCard(
+                            padding: EdgeInsets.zero,
+                            borderRadius: AppRadius.md,
                             child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               leading: CircleAvatar(
-                                backgroundColor: Colors.blue,
-                                child: Text('J${seance.jour}'),
+                                backgroundColor: AppColors.sageBg,
+                                foregroundColor: AppColors.sageDeep,
+                                child: Text(
+                                  'J${seance.jour}',
+                                  style: AppText.body(size: 13, weight: FontWeight.w700, color: AppColors.sageDeep),
+                                ),
                               ),
-                              title: Text(seance.titre),
-                              subtitle: Text(seance.description),
+                              title: Text(seance.titre, style: AppText.body(size: 16, weight: FontWeight.w600)),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(seance.description, style: AppText.body(size: 13, color: AppColors.ink3)),
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.fitness_center),
+                                    tooltip: 'Ajouter des exercices',
+                                    icon: const Icon(Icons.fitness_center, color: AppColors.sageDeep),
                                     onPressed: () {
                                       Navigator.push(
                                         context,
@@ -164,10 +198,9 @@ class _GestionSeancesScreenState extends State<GestionSeancesScreen> {
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {
-                                      // À implémenter: supprimer séance
-                                    },
+                                    tooltip: 'Supprimer',
+                                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                                    onPressed: () => _supprimerSeance(seance),
                                   ),
                                 ],
                               ),
@@ -180,6 +213,68 @@ class _GestionSeancesScreenState extends State<GestionSeancesScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _AddSeanceForm extends StatelessWidget {
+  final TextEditingController jourController;
+  final TextEditingController titreController;
+  final TextEditingController descriptionController;
+  final VoidCallback onSubmit;
+
+  const _AddSeanceForm({
+    required this.jourController,
+    required this.titreController,
+    required this.descriptionController,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sh1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Nouvelle seance', style: AppText.body(size: 18, weight: FontWeight.w600)),
+          const SizedBox(height: 14),
+          TextField(
+            controller: jourController,
+            keyboardType: TextInputType.number,
+            style: AppText.body(size: 15),
+            decoration: const InputDecoration(
+              labelText: 'Jour',
+              hintText: '1, 2, 3...',
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: titreController,
+            style: AppText.body(size: 15),
+            decoration: const InputDecoration(labelText: 'Titre de la seance'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: descriptionController,
+            maxLines: 2,
+            style: AppText.body(size: 15),
+            decoration: const InputDecoration(labelText: 'Description'),
+          ),
+          const SizedBox(height: 14),
+          AppButton(
+            label: 'Ajouter la seance',
+            onPressed: onSubmit,
+            leading: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+          ),
+        ],
+      ),
     );
   }
 }

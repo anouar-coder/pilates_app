@@ -1,6 +1,7 @@
 // lib/screens/programmes/seance_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../config/app_theme.dart';
 import '../../services/programme_service.dart';
 import '../../models/seance.dart';
 import '../../models/exercice.dart';
@@ -32,189 +33,157 @@ class _SeanceDetailScreenState extends State<SeanceDetailScreen> {
       widget.seance.id,
       widget.exercice.id,
     );
+    if (!mounted) return;
     setState(() => _isLoading = false);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Exercice terminé !'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context);
-    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Exercice termine')),
+    );
+    Navigator.pop(context);
   }
 
   Future<void> _ouvrirVideo() async {
-    if (widget.exercice.videoUrl != null) {
-      final url = Uri.parse(widget.exercice.videoUrl!);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      }
+    final videoUrl = widget.exercice.videoUrl;
+    if (videoUrl == null || videoUrl.isEmpty) return;
+
+    final url = Uri.parse(videoUrl);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
         title: Text(widget.exercice.titre),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Titre
-            Text(
-              widget.exercice.titre,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(widget.exercice.titre, style: AppText.display(size: 30)),
             const SizedBox(height: 8),
-
-            // Séance
             Text(
-              'Séance: ${widget.seance.titre}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              'Seance: ${widget.seance.titre}',
+              style: AppText.body(size: 15, color: AppColors.ink3),
+            ),
+            const SizedBox(height: 20),
+            _Section(
+              title: 'Description',
+              child: Text(
+                widget.exercice.description,
+                style: AppText.body(size: 15, color: AppColors.ink2, height: 1.5),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Description
-            const Text(
-              'Description',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.exercice.description,
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-            const SizedBox(height: 24),
-
-            // Détails de l'exercice
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.timer, color: Colors.blue),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Durée: ',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Text(
-                          '${widget.exercice.dureeSecondes} secondes',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.loop, color: Colors.blue),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Répétitions: ',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Text(
-                          '${widget.exercice.repetitions} fois',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Matériel nécessaire
-            if (widget.exercice.materiel.isNotEmpty) ...[
-              const Text(
-                'Matériel nécessaire',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: widget.exercice.materiel.map((item) {
-                  return Chip(
-                    label: Text(item),
-                    avatar: const Icon(Icons.fitness_center, size: 16),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Bouton vidéo
-            if (widget.exercice.videoUrl != null) ...[
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _ouvrirVideo,
-                  icon: const Icon(Icons.play_circle),
-                  label: const Text('Voir la vidéo'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
+            AppCard(
+              borderRadius: AppRadius.md,
+              child: Column(
+                children: [
+                  _InfoRow(
+                    icon: Icons.timer_outlined,
+                    label: 'Duree',
+                    value: '${widget.exercice.dureeSecondes} secondes',
                   ),
+                  const Divider(height: 24, color: AppColors.line),
+                  _InfoRow(
+                    icon: Icons.loop_rounded,
+                    label: 'Repetitions',
+                    value: '${widget.exercice.repetitions} fois',
+                  ),
+                ],
+              ),
+            ),
+            if (widget.exercice.materiel.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _Section(
+                title: 'Materiel necessaire',
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: widget.exercice.materiel.map((item) {
+                    return AppTag(
+                      label: item,
+                      background: AppColors.sageBg,
+                      textColor: AppColors.sageDeep,
+                    );
+                  }).toList(),
                 ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            if (widget.exercice.videoUrl != null && widget.exercice.videoUrl!.isNotEmpty) ...[
+              AppButtonSoft(
+                label: 'Voir la video',
+                onPressed: _ouvrirVideo,
+                background: AppColors.dangerBg,
+                foreground: AppColors.danger,
               ),
               const SizedBox(height: 12),
             ],
-
-            // Bouton marquer comme fait
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _marquerTermine,
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.check),
-                label: const Text('Marquer comme terminé'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+            AppButton(
+              label: 'Marquer comme termine',
+              onPressed: _isLoading ? null : _marquerTermine,
+              isLoading: _isLoading,
+              backgroundColor: AppColors.sageDeep,
+              leading: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _Section({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppText.body(size: 18, weight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: const BoxDecoration(color: AppColors.sageBg, shape: BoxShape.circle),
+          child: Icon(icon, color: AppColors.sageDeep, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(label, style: AppText.body(size: 14, color: AppColors.ink3)),
+        ),
+        Text(value, style: AppText.body(size: 15, weight: FontWeight.w600)),
+      ],
     );
   }
 }

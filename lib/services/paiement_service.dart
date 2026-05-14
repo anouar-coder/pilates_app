@@ -25,7 +25,7 @@ class PaiementService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('❌ Utilisateur non connecté');
+      debugPrint('❌ Utilisateur non connecté');
       return false;
     }
 
@@ -67,7 +67,7 @@ class PaiementService {
       );
 
     } catch (e) {
-      print('❌ Erreur paiement: $e');
+      debugPrint('❌ Erreur paiement: $e');
       return false;
     }
   }
@@ -81,7 +81,7 @@ class PaiementService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('❌ Utilisateur non connecté');
+      debugPrint('❌ Utilisateur non connecté');
       return false;
     }
 
@@ -121,7 +121,7 @@ class PaiementService {
       );
 
     } catch (e) {
-      print('❌ Erreur paiement pack: $e');
+      debugPrint('❌ Erreur paiement pack: $e');
       return false;
     }
   }
@@ -134,7 +134,7 @@ class PaiementService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('❌ Utilisateur non connecté');
+      debugPrint('❌ Utilisateur non connecté');
       return false;
     }
 
@@ -172,7 +172,7 @@ class PaiementService {
       );
 
     } catch (e) {
-      print('❌ Erreur paiement abonnement: $e');
+      debugPrint('❌ Erreur paiement abonnement: $e');
       return false;
     }
   }
@@ -203,11 +203,11 @@ class PaiementService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        print('❌ Erreur Stripe: ${response.body}');
+        debugPrint('❌ Erreur Stripe: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('❌ Exception: $e');
+      debugPrint('❌ Exception: $e');
       return null;
     }
   }
@@ -258,7 +258,7 @@ class PaiementService {
 
       return true;
     } catch (e) {
-      print('❌ Erreur confirmation: $e');
+      debugPrint('❌ Erreur confirmation: $e');
       return false;
     }
   }
@@ -303,7 +303,7 @@ class PaiementService {
 
       return true;
     } catch (e) {
-      print('❌ Erreur confirmation pack: $e');
+      debugPrint('❌ Erreur confirmation pack: $e');
       return false;
     }
   }
@@ -369,7 +369,7 @@ class PaiementService {
 
       return true;
     } catch (e) {
-      print('❌ Erreur confirmation abonnement: $e');
+      debugPrint('❌ Erreur confirmation abonnement: $e');
       return false;
     }
   }

@@ -1,6 +1,7 @@
 // lib/screens/admin/envoyer_notification_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../config/app_theme.dart';
 
 class EnvoyerNotificationScreen extends StatefulWidget {
   const EnvoyerNotificationScreen({super.key});
@@ -16,12 +17,9 @@ class _EnvoyerNotificationScreenState extends State<EnvoyerNotificationScreen> {
   String _typeEnvoi = 'tous';
 
   Future<void> _envoyerNotification() async {
-    if (_titreController.text.isEmpty || _messageController.text.isEmpty) {
+    if (_titreController.text.trim().isEmpty || _messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez remplir tous les champs'),
-          backgroundColor: Colors.orange,
-        ),
+        const SnackBar(content: Text('Veuillez remplir tous les champs'), backgroundColor: AppColors.warn),
       );
       return;
     }
@@ -29,169 +27,112 @@ class _EnvoyerNotificationScreenState extends State<EnvoyerNotificationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Récupérer tous les utilisateurs
-      final usersSnapshot = await FirebaseFirestore.instance
-          .collection('utilisateurs')
-          .get();
+      final usersSnapshot = await FirebaseFirestore.instance.collection('utilisateurs').get();
+      var notificationsEnvoyees = 0;
 
-      int notificationsEnvoyees = 0;
+      for (final userDoc in usersSnapshot.docs) {
+        final role = userDoc.data()['role'] ?? 'client';
 
-      for (var userDoc in usersSnapshot.docs) {
-        final userData = userDoc.data();
-        final role = userData['role'] ?? 'client';
-
-        // Filtrer selon le type d'envoi
         if (_typeEnvoi == 'tous' || (_typeEnvoi == 'client' && role == 'client')) {
-          
-          // Créer un document dans la sous-collection notifications de l'utilisateur
-          await userDoc.reference
-              .collection('notifications')
-              .add({
-            'titre': _titreController.text,
-            'message': _messageController.text,
+          await userDoc.reference.collection('notifications').add({
+            'titre': _titreController.text.trim(),
+            'message': _messageController.text.trim(),
             'lu': false,
             'date': FieldValue.serverTimestamp(),
             'expediteur': 'admin',
           });
-          
+
           notificationsEnvoyees++;
         }
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ $notificationsEnvoyees notification(s) envoyée(s)'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _titreController.clear();
-        _messageController.clear();
-      }
-
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$notificationsEnvoyees notification(s) envoyee(s)')),
+      );
+      _titreController.clear();
+      _messageController.clear();
     } catch (e) {
-      print('❌ Erreur: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Erreur: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      debugPrint('Erreur notification: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger),
+      );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
         title: const Text('Envoyer une notification'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.sage))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Envoyer à :',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile(
-                          title: const Text('Tous les utilisateurs'),
-                          value: 'tous',
-                          groupValue: _typeEnvoi,
-                          onChanged: (value) => setState(() => _typeEnvoi = value.toString()),
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile(
-                          title: const Text('Uniquement clients'),
-                          value: 'client',
-                          groupValue: _typeEnvoi,
-                          onChanged: (value) => setState(() => _typeEnvoi = value.toString()),
-                        ),
-                      ),
+                  Text('Envoyer a', style: AppText.body(size: 16, weight: FontWeight.w600)),
+                  const SizedBox(height: 10),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'tous', label: Text('Tous'), icon: Icon(Icons.groups_rounded)),
+                      ButtonSegment(value: 'client', label: Text('Clients'), icon: Icon(Icons.person_rounded)),
                     ],
+                    selected: {_typeEnvoi},
+                    onSelectionChanged: (selection) => setState(() => _typeEnvoi = selection.first),
+                    style: ButtonStyle(
+                      foregroundColor: WidgetStateProperty.resolveWith((states) {
+                        return states.contains(WidgetState.selected) ? Colors.white : AppColors.ink2;
+                      }),
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                        return states.contains(WidgetState.selected) ? AppColors.ink : AppColors.card;
+                      }),
+                    ),
                   ),
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: _titreController,
-                    decoration: InputDecoration(
+                    style: AppText.body(size: 15),
+                    decoration: const InputDecoration(
                       labelText: 'Titre',
-                      prefixIcon: const Icon(Icons.title),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      prefixIcon: Icon(Icons.title_rounded),
                     ),
                   ),
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: _messageController,
                     maxLines: 4,
-                    decoration: InputDecoration(
+                    style: AppText.body(size: 15),
+                    decoration: const InputDecoration(
                       labelText: 'Message',
-                      prefixIcon: const Icon(Icons.message),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      prefixIcon: Icon(Icons.message_rounded),
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  const Text(
-                    'Exemples :',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
+                  Text('Exemples', style: AppText.body(size: 16, weight: FontWeight.w600)),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      _buildExempleChip(
-                        'Nouveau cours',
-                        'Un nouveau cours de Pilates est disponible !',
-                      ),
-                      _buildExempleChip(
-                        'Promotion',
-                        '-20% sur tous les cours cette semaine',
-                      ),
-                      _buildExempleChip(
-                        'Rappel',
-                        'Votre cours commence dans 24h',
-                      ),
+                      _buildExempleChip('Nouveau cours', 'Un nouveau cours de Pilates est disponible !'),
+                      _buildExempleChip('Promotion', '-20% sur tous les cours cette semaine'),
+                      _buildExempleChip('Rappel', 'Votre cours commence dans 24h'),
                     ],
                   ),
                   const SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _envoyerNotification,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Envoyer',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
+                  AppButton(
+                    label: 'Envoyer',
+                    onPressed: _envoyerNotification,
+                    leading: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                   ),
                 ],
               ),
@@ -201,14 +142,15 @@ class _EnvoyerNotificationScreenState extends State<EnvoyerNotificationScreen> {
 
   Widget _buildExempleChip(String label, String message) {
     return ActionChip(
-      label: Text(label),
+      label: Text(label, style: AppText.body(size: 13, color: AppColors.sageDeep)),
       onPressed: () {
         setState(() {
           _titreController.text = label;
           _messageController.text = message;
         });
       },
-      backgroundColor: Colors.blue.withValues(alpha: 0.1),
+      backgroundColor: AppColors.sageBg,
+      side: BorderSide.none,
     );
   }
 

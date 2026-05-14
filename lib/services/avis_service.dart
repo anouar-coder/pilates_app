@@ -1,6 +1,7 @@
 // lib/services/avis_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/avis.dart';
 
 class AvisService {
@@ -16,7 +17,7 @@ class AvisService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('❌ Utilisateur non connecté');
+      debugPrint('❌ Utilisateur non connecté');
       return false;
     }
 
@@ -55,10 +56,10 @@ class AvisService {
       // Mettre à jour la note moyenne du cours
       await _mettreAJourNoteMoyenne(coursId);
 
-      print('✅ Avis ajouté avec succès');
+      debugPrint('✅ Avis ajouté avec succès');
       return true;
     } catch (e) {
-      print('❌ Erreur ajout avis: $e');
+      debugPrint('❌ Erreur ajout avis: $e');
       return false;
     }
   }
@@ -93,7 +94,7 @@ class AvisService {
         'nombreAvis': avisSnapshot.docs.length,
       });
     } catch (e) {
-      print('❌ Erreur mise à jour note moyenne: $e');
+      debugPrint('❌ Erreur mise à jour note moyenne: $e');
     }
   }
 
