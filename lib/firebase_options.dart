@@ -8,7 +8,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: "AIzaSyCHrLdhc8_x5MQSZC8x3iFBS5QX1WKD7Po",
+    apiKey: "",//mettre ici l api key de firebase
     authDomain: "pilates-app-4430c.firebaseapp.com",
     projectId: "pilates-app-4430c",
     storageBucket: "pilates-app-4430c.firebasestorage.app",
